@@ -62,6 +62,7 @@ const { createPrintingService }   = require('./lib/printing');
 const { createIngestService }     = require('./lib/ingest');
 const { createPrinterManager }    = require('./lib/printerManager');
 const { registerRoutes }          = require('./lib/routes');
+const { createIngressMiddleware } = require('./lib/ingress');
 
 
 // ┌─────────┐
@@ -192,6 +193,7 @@ app.use((req, res, next) => {
 
   next();
 });
+app.use(createIngressMiddleware({ staticDir }));
 app.use(express.static(staticDir));
 pluginManager.registerStaticRoutes(app);
 app.use('/fonts', express.static(path.join(staticDir, 'fonts')));

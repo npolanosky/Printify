@@ -1,0 +1,8 @@
+node_modules
+.git
+.claude
+data/logs
+data/uploads
+lib/previewCache
+hassio-addon
+*.md

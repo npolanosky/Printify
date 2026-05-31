@@ -1,0 +1,15 @@
+services:
+  printify:
+    build: .
+    ports:
+      - "8020:8020"
+    volumes:
+      - ./config:/app/config
+      - printify-data:/app/data
+    # Uncomment to pass a Brother P-touch USB device into the container.
+    # devices:
+    #   - /dev/usb/lp0:/dev/usb/lp0
+    restart: unless-stopped
+
+volumes:
+  printify-data:
