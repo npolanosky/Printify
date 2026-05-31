@@ -135,6 +135,7 @@ const printingService = createPrintingService({
   converter,
   previewer,
   jobSystem,
+  imPath,
 });
 const ingestService = createIngestService({
   uploadsDir,

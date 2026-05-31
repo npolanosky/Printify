@@ -22,7 +22,7 @@ plugins:
 # ╭────────────────────────────────────────────────────────────────────────────────────────╮
 # │  Printer Options                                                                       │
 # │  - displayName: UI label shown in the app.                                             │
-# │  - printMode: "driver" or "cli"; driver uses "lp" on Linux, pdf-to-printer elsewhere.  │
+# │  - printMode: "driver", "cli", or "brother" (native USB for P-touch on Linux).         │
 # │  - driverName: printer / queue name for driver mode.                                   │
 # │  - size: print target size, such as "4x6", "3.8x5.8", or "tape" for variable labels.   │
 # │  - units: inch, mm, cm, or px.                                                         │
@@ -77,6 +77,22 @@ plugins:
 #      monochromeDither: "floydsteinberg"
 #      labelBuilder: true
 #      bundleCopies: false
+#
+#    ptouchUsb:
+#      displayName: "Brother P-Touch Label Maker"
+#      printMode: "brother"
+#      size: "tape"
+#      tapes: [6, 9, 12, 18, 24]
+#      defaultTape: 12
+#      density: "180"
+#      acceptedKinds: ["image"]
+#      monochrome: true
+#      monochromeBit: 1
+#      monochromeDither: "floydsteinberg"
+#      labelBuilder: true
+#      bundleCopies: false
+#      # brotherDevice: "/dev/usb/lp0"    # optional; auto-detected when omitted
+#      # brotherAutocut: true              # optional; cut after each label (default true)
 
 printers:
   zebra:
