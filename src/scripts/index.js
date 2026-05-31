@@ -1185,7 +1185,21 @@
       const printer = getPrinterById(printerId);
       const pageTotal = card.querySelector('.printer-card__page-total');
 
-      if (!printer || !pageTotal) return;
+      if (!printer) return;
+
+      const statusEl = card.querySelector('[data-role="printer-status"]');
+      if (statusEl) {
+        const offline = printer.online === false;
+        statusEl.classList.toggle('is-offline', offline);
+        statusEl.classList.toggle('is-online', !offline);
+        statusEl.setAttribute('title', offline
+          ? 'Printer not detected or not responding'
+          : 'Printer detected and ready');
+        const statusLabel = statusEl.querySelector('.printer-card__status-label');
+        if (statusLabel) statusLabel.textContent = offline ? 'Offline' : 'Online';
+      }
+
+      if (!pageTotal) return;
 
       const displayCount = getPrinterDisplayPageCount(printer);
 
@@ -1307,6 +1321,21 @@
     return accepts.join(',');
   };
 
+  const buildPrinterStatusMarkup = printer => {
+    const offline = printer.online === false;
+    const label = offline ? 'Offline' : 'Online';
+    const title = offline
+      ? 'Printer not detected or not responding'
+      : 'Printer detected and ready';
+
+    return `
+      <span class="printer-card__status ${offline ? 'is-offline' : 'is-online'}" data-role="printer-status" title="${title}">
+        <span class="printer-card__status-dot" aria-hidden="true"></span>
+        <span class="printer-card__status-label">${label}</span>
+      </span>
+    `;
+  };
+
   const buildPrinterCardInnerMarkup = printer => `
     <div class="printer-card__overlay" aria-hidden="true"></div>
     <div class="printer-card__file-count" data-role="file-count" style="--printer-file-count-ratio:${getPrinterPaperRatio(printer)};" aria-hidden="true">
@@ -1314,7 +1343,10 @@
         <span class="printer-card__file-count-number">1</span>
       </span>
     </div>
-    <p class="printer-card__name">${escapeHtml(printer.displayName)}</p>
+    <div class="printer-card__header">
+      <p class="printer-card__name">${escapeHtml(printer.displayName)}</p>
+      ${buildPrinterStatusMarkup(printer)}
+    </div>
     <div class="printer-card__body">
       <img class="printer-card__icon" src="${printer.iconUrl || '/favicon.ico'}" alt="${escapeHtml(printer.displayName)}">
       <p class="printer-card__page-total" aria-label="Successful pages printed: ${escapeHtml(formatWholeNumber(getPrinterDisplayPageCount(printer)))}" title="${escapeHtml(buildPrinterCounterTooltip(printer))}">${buildPrinterCounterMarkup(getPrinterDisplayPageCount(printer))}</p>

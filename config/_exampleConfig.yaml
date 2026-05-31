@@ -31,6 +31,8 @@ plugins:
 # │  - defaultTape: optional default tape width.                                           │
 # │  - output: required for cli mode; "png" or "pdf".                                      │
 # │  - acceptedKinds: any of pdf, image, zip.                                              │
+# │  - icon: thumbnail file in config/icons (name with or without extension). Falls back   │
+# │    to a file matching the printer id or driverName, then the default icon.             │
 # │  - monochrome: force image prep to black/white.                                        │
 # │  - monochromeBit: 1 for true black/white output or 8 for grayscale.                    │
 # │  - monochromeDither: floydsteinberg, riemersma, or none.                               │
@@ -53,6 +55,7 @@ plugins:
 #      units: "inch"
 #      density: "300"
 #      acceptedKinds: ["pdf", "image", "zip"]
+#      icon: "ptouchIndustrial"
 #      monochrome: false
 #      monochromeBit: 1
 #      monochromeDither: "floydsteinberg"
