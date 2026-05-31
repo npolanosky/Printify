@@ -1015,8 +1015,10 @@ img {
   inset: 0;
   z-index: 1090;
   display: none;
-  place-items: center;
+  place-items: start center;
+  align-content: start;
   padding: 24px;
+  overflow-y: auto;
   background: rgba(24, 33, 43, 0.3);
   opacity: 0;
   transition: opacity 220ms ease;
@@ -1033,6 +1035,8 @@ img {
 
 .printify-builder__panel {
   width: min(860px, 96vw);
+  /* Let the panel grow past the viewport and scroll within the overlay. */
+  margin: auto;
   padding: 28px;
   border-radius: 28px;
   background: var(--printify-builder-surface);

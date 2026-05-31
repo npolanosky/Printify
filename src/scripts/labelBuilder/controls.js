@@ -203,6 +203,13 @@
         });
       });
 
+      // Select all on focus so the first digit typed replaces the whole
+      // value. Without this, typing "36" reads "8" → input fires → clamps
+      // to 8 → field shows "8" → typing "6" → field becomes "86".
+      refs.fontSizeInput?.addEventListener('focus', () => {
+        refs.fontSizeInput.select();
+      });
+
       refs.fontSizeInput?.addEventListener('input', () => {
         if (state.isSyncingFontSizeInput) return;
 
