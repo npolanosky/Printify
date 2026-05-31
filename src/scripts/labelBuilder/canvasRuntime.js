@@ -266,7 +266,13 @@
       const tapeWidthMm = state.currentTapeWidthMm || utils.getResolvedDefaultTapeWidth(printer) || 12;
       const tapeLengthMm = utils.normalizeTapeLengthMm(state.currentTapeLengthMm);
       const width = utils.mmToPixels(tapeLengthMm, printer?.density);
-      const height = utils.mmToPixels(tapeWidthMm, printer?.density);
+      // Cap the canvas height to the printer's physical head width when known.
+      // This means selecting "24mm tape" on a printer with an 18mm head sizes
+      // the canvas to 18mm (the printable area) rather than 24mm — the user
+      // designs for what will actually print, not the full tape width.
+      const maxPrintableMm = printer?.brotherMaxPrintableWidthMm || null;
+      const effectiveTapeWidthMm = maxPrintableMm ? Math.min(tapeWidthMm, maxPrintableMm) : tapeWidthMm;
+      const height = utils.mmToPixels(effectiveTapeWidthMm, printer?.density);
 
       return {
         width: Number.isFinite(width) ? width : constants.DEFAULT_CANVAS_SIZE.width,
@@ -320,9 +326,14 @@
 
       if (refs.tapeWidthSelect) {
         const printerTapes = Array.isArray(printer?.tapes) ? printer.tapes : [];
-        refs.tapeWidthSelect.innerHTML = printerTapes.map(tapeWidth => (
-          `<option value="${tapeWidth}">${tapeWidth} mm</option>`
-        )).join('');
+        const maxPrintableMm = printer?.brotherMaxPrintableWidthMm || null;
+        refs.tapeWidthSelect.innerHTML = printerTapes.map(tapeWidth => {
+          const printableMm = maxPrintableMm ? Math.min(tapeWidth, maxPrintableMm) : tapeWidth;
+          const label = (maxPrintableMm && tapeWidth > maxPrintableMm)
+            ? `${tapeWidth} mm (${printableMm} mm printable)`
+            : `${tapeWidth} mm`;
+          return `<option value="${tapeWidth}">${label}</option>`;
+        }).join('');
 
         if (state.currentTapeWidthMm && printerTapes.includes(state.currentTapeWidthMm)) {
           refs.tapeWidthSelect.value = String(state.currentTapeWidthMm);
