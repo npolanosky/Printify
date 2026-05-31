@@ -5,21 +5,32 @@
 # │  entry point for Printify │
 # ╰────────────────────────────╯
 
-CONFIG_FILE="/app/config/config.yaml"
+APP=/app
 
-# Seed a default config on first boot if none exists.
-if [ ! -f "$CONFIG_FILE" ]; then
+# The cloned source ships as a read-only baseline inside the image. Anything
+# the user creates or edits is redirected onto persistent volumes:
+#   /config  -> add-on config volume, editable from the host file editors
+#   /data    -> always-persistent add-on data volume
+mkdir -p /data/userdata/logs /data/userdata/uploads /data/userdata/labelTemplates \
+         /data/uploads /data/previewCache
+
+# Seed a default config on first boot if the user has none yet.
+if [ ! -f /config/config.yaml ]; then
     bashio::log.info "Creating default config from template..."
-    cp /app/config/_exampleConfig.yaml "$CONFIG_FILE"
+    cp "$APP/config/_exampleConfig.yaml" /config/config.yaml
 fi
 
-# Apply the testing flag from the add-on options panel.
-TESTING=$(bashio::config 'testing')
-if [ "$TESTING" = "true" ]; then
-    bashio::log.info "Testing mode enabled — prints will be logged but not dispatched."
-else
-    bashio::log.info "Testing mode disabled — prints will be sent to real printers."
-fi
+# Point the app's writable paths at the persistent volumes. Remove the
+# baseline directories first so the symlinks replace them cleanly.
+rm -rf "$APP/data" "$APP/uploads" "$APP/lib/previewCache"
+ln -sf  /config/config.yaml  "$APP/config/config.yaml"
+ln -sfn /data/userdata       "$APP/data"
+ln -sfn /data/uploads        "$APP/uploads"
+ln -sfn /data/previewCache   "$APP/lib/previewCache"
+ln -sf  /data/serverData.json "$APP/serverData.json"
+
+bashio::log.info "Config is at /addon_configs/$(bashio::addon.slug)/config.yaml"
+bashio::log.info "Edit it to define printers and toggle 'testing' (defaults on)."
 
 bashio::log.info "Starting Printify..."
 exec node /app/Printify.js
