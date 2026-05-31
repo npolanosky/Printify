@@ -110,6 +110,17 @@
   window.WebSocket.CLOSING = OriginalWebSocket.CLOSING;
   window.WebSocket.CLOSED = OriginalWebSocket.CLOSED;
 
+  // Fix clippy's BASE_PATH so the sprite sheet, agent scripts, and the CSS
+  // background-image that renders the character all resolve through the ingress
+  // prefix. clippy.js sets BASE_PATH synchronously; bootClippy() is deferred
+  // by awaited network requests in the boot sequence — so DOMContentLoaded
+  // fires after BASE_PATH is set but before clippy.load() is called.
+  window.addEventListener('DOMContentLoaded', function () {
+    if (window.clippy && typeof window.clippy.BASE_PATH === 'string') {
+      window.clippy.BASE_PATH = rewrite(window.clippy.BASE_PATH);
+    }
+  }, true);
+
   // Static markup is rewritten server-side, but the UI also injects images
   // (printer icons, previews, template icons) at runtime via innerHTML and
   // element.src. Watch the DOM and prefix any absolute src/href as it lands.
