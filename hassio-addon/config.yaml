@@ -21,7 +21,7 @@ map:
   - addon_config:rw
 privileged:
   - hardware
-devices: true
+auto_uart: true
 options:
   testing: false
 schema:
