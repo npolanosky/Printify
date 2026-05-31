@@ -19,9 +19,10 @@ ports_description:
   8020/tcp: "Printify web UI (also available through ingress)"
 map:
   - addon_config:rw
-privileged:
-  - hardware
-auto_uart: true
+# Grant access to USB devices (Brother P-Touch printers expose /dev/usb/lp*)
+# and udev so their device nodes are populated inside the container.
+usb: true
+udev: true
 options:
   testing: false
 schema:
