@@ -64,6 +64,36 @@
     return originalOpen.apply(this, arguments);
   };
 
+  // Rewrite Element.setAttribute so that src/href values set BEFORE an
+  // element is appended to the DOM are also prefixed. This covers:
+  //   - clippy.js: script.setAttribute('src', ...) then document.head.appendChild(script)
+  //   - clippy.js: img.setAttribute('src', ...) on an off-DOM Image
+  // The MutationObserver fires after the element is already in the DOM, by
+  // which point the browser has already fetched the original (wrong) URL.
+  var originalSetAttribute = Element.prototype.setAttribute;
+  Element.prototype.setAttribute = function (name, value) {
+    if ((name === 'src' || name === 'href') && typeof value === 'string') {
+      return originalSetAttribute.call(this, name, rewrite(value));
+    }
+    return originalSetAttribute.call(this, name, value);
+  };
+
+  // Rewrite the HTMLImageElement.src property setter for dynamically created
+  // images that are never added to the DOM (e.g. the QR/barcode generator in
+  // the label builder calls loadImageElement which does `element.src = url`).
+  try {
+    var imgSrcDescriptor = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+    if (imgSrcDescriptor && imgSrcDescriptor.set) {
+      Object.defineProperty(HTMLImageElement.prototype, 'src', {
+        get: imgSrcDescriptor.get,
+        set: function (value) {
+          imgSrcDescriptor.set.call(this, rewrite(value));
+        },
+        configurable: true,
+      });
+    }
+  } catch (e) { /* best-effort; falls back to MutationObserver for in-DOM images */ }
+
   // Rewrite WebSocket URLs so ws://host/ws/logs includes the ingress path.
   var OriginalWebSocket = window.WebSocket;
   window.WebSocket = function (url, protocols) {
