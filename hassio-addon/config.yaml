@@ -1,0 +1,28 @@
+name: Printify
+description: Print server for local label printers with native Brother P-Touch USB support
+version: "1.0.0"
+slug: printify
+url: "https://github.com/npolanosky/Printify"
+arch:
+  - amd64
+  - aarch64
+  - armv7
+init: false
+startup: application
+boot: auto
+ingress: true
+ingress_port: 8020
+panel_icon: "mdi:printer"
+ports:
+  8020/tcp: 8020
+ports_description:
+  8020/tcp: "Printify web UI (also available through ingress)"
+map:
+  - addon_config:rw
+privileged:
+  - hardware
+devices: true
+options:
+  testing: false
+schema:
+  testing: bool

@@ -9,8 +9,8 @@ logs/*.ndjson
 data/uploads
 data/labelTemplates
 data/logs
-config.yaml
-config/config.yaml
+/config.yaml
+/config/config.yaml
 src/plugins/emu/ROM/*
 !src/plugins/emu/ROM/.gitkeep
 src/plugins/emu/SAVES/*
