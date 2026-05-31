@@ -482,6 +482,10 @@ img {
   pointer-events: none;
 }
 
+.printer-card__status.is-hidden {
+  display: none;
+}
+
 .printer-card__status-dot {
   width: 8px;
   height: 8px;

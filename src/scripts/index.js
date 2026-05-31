@@ -691,6 +691,9 @@
 
   let quickConfigOpen = false;
   let quickConfigCloseTimer = null;
+  // "Online" badges stay implicit until the operator opens the config menu in
+  // this session; "Offline" badges are always shown so problems stay visible.
+  let printerStatusRevealed = false;
   let assistantMenuOpen = false;
   let themeFamilyMenuOpen = false;
   let quickConfigHeightFrame = null;
@@ -1007,6 +1010,13 @@
       measureQuickConfigOpenHeight();
       quickConfig.classList.add('is-open');
       scheduleQuickConfigHeightSync();
+
+      // Reveal "Online" badges for the rest of this session once the operator
+      // opens the config menu; "Offline" badges were visible regardless.
+      if (!printerStatusRevealed) {
+        printerStatusRevealed = true;
+        syncPrinterStatBadges();
+      }
     } else {
       closeThemeFamilyMenu();
       closeAssistantMenu();
@@ -1192,6 +1202,7 @@
         const offline = printer.online === false;
         statusEl.classList.toggle('is-offline', offline);
         statusEl.classList.toggle('is-online', !offline);
+        statusEl.classList.toggle('is-hidden', !offline && !printerStatusRevealed);
         statusEl.setAttribute('title', offline
           ? 'Printer not detected or not responding'
           : 'Printer detected and ready');
@@ -1327,9 +1338,11 @@
     const title = offline
       ? 'Printer not detected or not responding'
       : 'Printer detected and ready';
+    // Online is implicit until revealed; Offline is always visible.
+    const hidden = !offline && !printerStatusRevealed;
 
     return `
-      <span class="printer-card__status ${offline ? 'is-offline' : 'is-online'}" data-role="printer-status" title="${title}">
+      <span class="printer-card__status ${offline ? 'is-offline' : 'is-online'}${hidden ? ' is-hidden' : ''}" data-role="printer-status" title="${title}">
         <span class="printer-card__status-dot" aria-hidden="true"></span>
         <span class="printer-card__status-label">${label}</span>
       </span>
