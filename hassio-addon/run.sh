@@ -29,8 +29,8 @@ ln -sfn /data/uploads        "$APP/uploads"
 ln -sfn /data/previewCache   "$APP/lib/previewCache"
 ln -sf  /data/serverData.json "$APP/serverData.json"
 
-bashio::log.info "Config is at /addon_configs/$(bashio::addon.slug)/config.yaml"
-bashio::log.info "Edit it to define printers and toggle 'testing' (defaults on)."
+bashio::log.info "Config is at /addon_configs/printify/config.yaml"
+bashio::log.info "Set 'testing: false' there to send jobs to the printer."
 
 bashio::log.info "Starting Printify..."
 exec node /app/Printify.js
