@@ -142,6 +142,14 @@
       event.preventDefault();
       await startAction();
     });
+    // pointerup and pointercancel are the pointer equivalents of keyup —
+    // without them the preview starts on press but never stops on release.
+    element.addEventListener('pointerup', async () => {
+      await stopAction();
+    });
+    element.addEventListener('pointercancel', async () => {
+      await stopAction();
+    });
     element.addEventListener('keydown', async event => {
       if (event.repeat) return;
       if (event.key !== ' ' && event.key !== 'Enter') return;
