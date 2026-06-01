@@ -168,6 +168,10 @@
       // Seed the default alignment so it persists in history snapshots.
       if (!textbox.verticalAlign) textbox.verticalAlign = 'top';
 
+      // Seed auto-fit-width defaults for newly created textboxes.
+      // Textboxes loaded from history/templates carry their saved values.
+      if (textbox.autoFitWidth === undefined) textbox.autoFitWidth = false;
+
       textbox.splitByGrapheme = false;
       ensureTextboxSerialState(textbox);
       syncTextboxWrappingBehavior(textbox);
@@ -285,6 +289,7 @@
         fontSize,
         frameHeight,
         autoFitText: false,
+        autoFitWidth: true,
       });
 
       builderCanvas.add(textbox);
@@ -322,13 +327,17 @@
       if (Object.prototype.hasOwnProperty.call(updates, 'fontSize')) {
         textObject.maxAutoFitFontSize = Math.max(8, Math.round(updates.fontSize || textObject.fontSize || 8));
       }
-      textObject.frameWidth = Math.max(textObject.frameWidth || textObject.width || 0, 48);
-      textObject.frameHeight = Math.max(textObject.frameHeight || 0, 32);
-      textObject.width = textObject.frameWidth;
-      syncTextboxWrappingBehavior(textObject);
-      if (textObject.autoFitText) fitTextboxFontToFrame(textObject);
-      textObject.initDimensions();
-      textObject.setCoords();
+      if (textObject.autoFitWidth) {
+        ctx.applyAutoFitWidth(textObject);
+      } else {
+        textObject.frameWidth = Math.max(textObject.frameWidth || textObject.width || 0, 48);
+        textObject.frameHeight = Math.max(textObject.frameHeight || 0, 32);
+        textObject.width = textObject.frameWidth;
+        syncTextboxWrappingBehavior(textObject);
+        if (textObject.autoFitText) fitTextboxFontToFrame(textObject);
+        textObject.initDimensions();
+        textObject.setCoords();
+      }
       ctx.syncTextControls(textObject);
       ctx.ensureCanvas().requestRenderAll();
       void ctx.syncAutoFitTapeCanvas();

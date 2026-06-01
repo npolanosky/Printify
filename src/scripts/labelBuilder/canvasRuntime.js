@@ -398,18 +398,76 @@
       return { right, bottom };
     };
 
+    // Measure the natural (no-word-wrap) width of a textbox by temporarily
+    // setting an unconstrained width so Fabric only splits at \n characters.
+    const measureNaturalTextWidth = textbox => {
+      const savedWidth = textbox.width;
+      const savedFrameWidth = textbox.frameWidth;
+      textbox.width = 32767;
+      textbox.frameWidth = 32767;
+      textbox.initDimensions();
+      const naturalWidth = Math.ceil(textbox.calcTextWidth());
+      textbox.width = savedWidth;
+      textbox.frameWidth = savedFrameWidth;
+      return naturalWidth;
+    };
+
+    // Apply auto-fit width: size the textbox to its content and re-center it
+    // on the canvas. Returns true if width changed, false if no-op.
+    const applyAutoFitWidth = textbox => {
+      if (!textbox || !textbox.autoFitWidth) return false;
+      const builderCanvas = ensureCanvas();
+      const canvasWidth = builderCanvas.getWidth();
+      const padding = textbox.padding || 0;
+
+      const naturalWidth = measureNaturalTextWidth(textbox);
+      const nextFrameWidth = Math.max(48, naturalWidth + padding * 2);
+
+      textbox.frameWidth = nextFrameWidth;
+      textbox.width = nextFrameWidth;
+      // Keep centered within current canvas
+      textbox.left = Math.round((canvasWidth - nextFrameWidth) / 2);
+      textbox.initDimensions();
+      textbox.setCoords();
+      return true;
+    };
+
     const getRequiredTapeLengthMm = printer => {
-      const bounds = getContentBounds();
       const density = Number(printer?.density);
       const paddingPx = utils.mmToPixels(constants.TAPE_EXPORT_PADDING_MM, density) || 0;
 
-      if (!bounds || !Number.isFinite(density) || density <= 0) {
+      if (!Number.isFinite(density) || density <= 0) {
         return utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm);
       }
 
+      const builderCanvas = ensureCanvas();
+      const objects = builderCanvas.getObjects().filter(object => !object.excludeFromExport);
+
+      if (!objects.length) {
+        return utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm);
+      }
+
+      let requiredRight = 0;
+
+      objects.forEach(object => {
+        let right;
+        if (object instanceof window.fabric.Textbox && object.autoFitWidth) {
+          // Auto-fit-width textboxes are centered; use frameWidth directly to
+          // avoid the circular dependency where centering makes bounds.right
+          // less than canvasWidth, causing the canvas to shrink on every sync.
+          right = (object.frameWidth || 0) + paddingPx;
+        } else {
+          const bounds = object.getBoundingRect();
+          if (Number.isFinite(bounds?.left) && Number.isFinite(bounds?.width)) {
+            right = bounds.left + bounds.width;
+          }
+        }
+        if (Number.isFinite(right)) requiredRight = Math.max(requiredRight, right);
+      });
+
       return Math.max(
         utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm),
-        Math.ceil(((bounds.right + paddingPx) / density) * 25.4)
+        requiredRight > 0 ? Math.ceil(((requiredRight + paddingPx) / density) * 25.4) : utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm)
       );
     };
 
@@ -607,6 +665,7 @@
     };
 
     return {
+      applyAutoFitWidth,
       applyBuilderObjectDefaults,
       applyCanvasViewportScale,
       applyTapeCanvasSize,

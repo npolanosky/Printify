@@ -49,11 +49,17 @@
           ctx.ensureTextboxSerialState(event.target);
           event.target.serialTemplateText = String(event.target.text || '');
           event.target.isPlaceholderText = false;
-          event.target.width = event.target.frameWidth || event.target.width;
-          ctx.syncTextboxWrappingBehavior(event.target);
-          if (event.target.autoFitText) ctx.fitTextboxFontToFrame(event.target);
-          event.target.initDimensions();
-          event.target.setCoords();
+
+          if (event.target.autoFitWidth) {
+            // Auto-fit-width: grow/shrink to content, re-center, no word-wrap.
+            ctx.applyAutoFitWidth(event.target);
+          } else {
+            event.target.width = event.target.frameWidth || event.target.width;
+            ctx.syncTextboxWrappingBehavior(event.target);
+            if (event.target.autoFitText) ctx.fitTextboxFontToFrame(event.target);
+            event.target.initDimensions();
+            event.target.setCoords();
+          }
         }
         ctx.syncTextControls(event.target || null);
         ctx.refreshBuilderMeta();
@@ -69,6 +75,16 @@
 
       builderCanvas.on('object:modified', async event => {
         ctx.bakeTextboxScale(event);
+        // Turn off auto-fit-width when the user manually resizes a textbox.
+        if (
+          event.target instanceof window.fabric.Textbox &&
+          event.target.autoFitWidth &&
+          event.transform?.action &&
+          ['scale', 'scaleX', 'scaleXY'].includes(event.transform.action)
+        ) {
+          event.target.autoFitWidth = false;
+          ctx.syncTextControls(event.target);
+        }
         ctx.refreshBuilderMeta();
         await ctx.syncAutoFitTapeCanvas();
         await ctx.recordHistoryCheckpoint();

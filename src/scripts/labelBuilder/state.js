@@ -17,6 +17,7 @@
     isSyncingFontInput: false,
     isSyncingFontSizeInput: false,
     isSyncingAutoFitInput: false,
+    isSyncingAutoFitWidthInput: false,
     isSyncingTextSerialInput: false,
     isSyncingCodeSerialInput: false,
     isSyncingQrInput: false,

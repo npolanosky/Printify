@@ -85,6 +85,14 @@
       state.isSyncingAutoFitInput = false;
     };
 
+    const syncAutoFitWidthInput = textObject => {
+      if (!refs.autoFitWidthInput) return;
+      state.isSyncingAutoFitWidthInput = true;
+      refs.autoFitWidthInput.checked = Boolean(textObject?.autoFitWidth);
+      refs.autoFitWidthInput.disabled = !textObject;
+      state.isSyncingAutoFitWidthInput = false;
+    };
+
     const syncTextSerialInputs = textObject => {
       if (!refs.textSerialEnabledInput || !refs.textSerialValueInput || !refs.textSerialValueField) return;
 
@@ -198,6 +206,7 @@
       syncFontInput(textObject);
       syncFontSizeInput(textObject);
       syncAutoFitInput(textObject);
+      syncAutoFitWidthInput(textObject);
       syncTextSerialInputs(textObject);
       syncAlignmentButtons(textObject);
       syncVerticalAlignButtons(textObject);
@@ -274,6 +283,13 @@
         syncTextControls(textObject);
         ctx.ensureCanvas().requestRenderAll();
         void ctx.recordHistoryCheckpoint();
+      });
+
+      refs.autoFitWidthInput?.addEventListener('change', () => {
+        if (state.isSyncingAutoFitWidthInput) return;
+        const textObject = ctx.getTextboxForControls();
+        if (!textObject) return;
+        ctx.updateSelectedTextbox({ autoFitWidth: refs.autoFitWidthInput.checked });
       });
 
       refs.textSerialEnabledInput?.addEventListener('change', () => {
