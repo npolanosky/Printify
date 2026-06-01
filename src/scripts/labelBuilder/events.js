@@ -147,15 +147,29 @@
         ctx.refreshBuilderMeta();
         await ctx.applyTapeCanvasSize(state.currentPrinter);
       });
-      refs.tapeAutoLengthInput?.addEventListener('change', () => {
+      refs.tapeAutoLengthInput?.addEventListener('change', async () => {
         if (!state.currentPrinter || !ctx.isTapePrinter(state.currentPrinter)) return;
 
         state.tapeAutoLengthEnabled = Boolean(refs.tapeAutoLengthInput.checked);
-        state.currentTapeLengthMm = state.tapeAutoLengthEnabled
-          ? Math.max(state.tapeMinimumLengthMm, ctx.getRequiredTapeLengthMm(state.currentPrinter))
-          : state.tapeMinimumLengthMm;
-        ctx.refreshBuilderMeta();
-        void ctx.syncAutoFitTapeCanvas();
+
+        if (state.tapeAutoLengthEnabled) {
+          // Compute the required length NOW and apply immediately.  We must
+          // call applyTapeCanvasSize directly because syncAutoFitTapeCanvas
+          // compares against state.currentTapeLengthMm — if we update that
+          // first it would see no change and bail without resizing the canvas.
+          state.currentTapeLengthMm = Math.max(
+            state.tapeMinimumLengthMm,
+            ctx.getRequiredTapeLengthMm(state.currentPrinter)
+          );
+          ctx.refreshBuilderMeta();
+          await ctx.applyTapeCanvasSize(state.currentPrinter);
+        } else {
+          state.currentTapeLengthMm = state.tapeMinimumLengthMm;
+          ctx.refreshBuilderMeta();
+          await ctx.applyTapeCanvasSize(state.currentPrinter);
+        }
+
+        ctx.syncLengthInputState();
       });
       refs.invertPrintInput?.addEventListener('change', () => {
         state.invertPrintEnabled = Boolean(refs.invertPrintInput.checked);

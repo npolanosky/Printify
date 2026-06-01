@@ -342,7 +342,9 @@
 
       if (refs.tapeLengthInput) {
         refs.tapeLengthInput.value = String(utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm));
-        refs.tapeLengthInput.disabled = false;
+        // Disable manual length entry while auto-fit is active; the canvas
+        // size is driven by content so a user-typed value would have no effect.
+        refs.tapeLengthInput.disabled = state.tapeAutoLengthEnabled;
       }
 
       if (refs.tapeAutoLengthInput) {
@@ -455,6 +457,17 @@
       applyCanvasViewportScale();
       builderCanvas.requestRenderAll();
       await persistTapePreference(printer);
+    };
+
+    // Keep the length input's disabled/value state in sync whenever the
+    // auto-fit flag or the current length changes.  syncTapeControls only
+    // runs on printer changes, so this must be called after any toggle.
+    const syncLengthInputState = () => {
+      if (!refs.tapeLengthInput) return;
+      refs.tapeLengthInput.disabled = state.tapeAutoLengthEnabled;
+      if (!state.tapeAutoLengthEnabled) {
+        refs.tapeLengthInput.value = String(utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm));
+      }
     };
 
     const syncAutoFitTapeCanvas = async () => {
@@ -621,6 +634,7 @@
       queueStateCommit,
       refreshBuilderMeta,
       syncAutoFitTapeCanvas,
+      syncLengthInputState,
       syncMonochromePreviewViewport,
       syncSnapOverlayViewport,
       syncTapeControls,

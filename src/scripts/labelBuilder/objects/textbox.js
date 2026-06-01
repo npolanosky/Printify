@@ -360,7 +360,10 @@
       textObject.setCoords();
       ctx.syncTextControls(textObject);
       builderCanvas.requestRenderAll();
-      void ctx.syncAutoFitTapeCanvas();
+      // Intentionally no syncAutoFitTapeCanvas here: layout presets position
+      // the textbox within the existing canvas, they do not change content
+      // length. Calling it would cause the canvas to shrink toward the textbox
+      // right edge each time, creating a narrowing feedback loop.
       void ctx.recordHistoryCheckpoint();
     };
 
