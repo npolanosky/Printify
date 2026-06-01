@@ -135,6 +135,21 @@
       });
     };
 
+    const syncVerticalAlignButtons = textObject => {
+      const buttons = [
+        [refs.verticalTopButton, 'top'],
+        [refs.verticalMiddleButton, 'middle'],
+        [refs.verticalBottomButton, 'bottom'],
+      ];
+
+      buttons.forEach(([button, value]) => {
+        if (!button) return;
+        button.disabled = !textObject;
+        // Default to 'top' if the property is not yet set.
+        button.classList.toggle('is-active', (textObject?.verticalAlign || 'top') === value);
+      });
+    };
+
     const syncTextboxLayoutButtons = textObject => {
       [refs.boxCenterButton, refs.boxFillButton].forEach(button => {
         if (!button) return;
@@ -185,6 +200,7 @@
       syncAutoFitInput(textObject);
       syncTextSerialInputs(textObject);
       syncAlignmentButtons(textObject);
+      syncVerticalAlignButtons(textObject);
       syncTextboxLayoutButtons(textObject);
       syncMediaLayoutButtons(activeObject);
       syncCodeInputs(codeObject);

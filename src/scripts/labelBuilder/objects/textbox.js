@@ -146,6 +146,28 @@
       textbox.calcTextHeight = function calcTextHeight() {
         return Math.max(baseCalcTextHeight(), this.frameHeight || 0);
       };
+
+      // Fabric renders text starting at -height/2 (top of the bounding box).
+      // verticalAlign shifts text within the extra space when the frame is
+      // taller than the current text content.
+      //   'top'    — text at top of frame (default Fabric behaviour)
+      //   'middle' — text centred vertically in the frame
+      //   'bottom' — text pinned to the bottom of the frame
+      const baseGetTopOffset = textbox._getTopOffset.bind(textbox);
+      textbox._getTopOffset = function _getTopOffset() {
+        const base = baseGetTopOffset();
+        const align = this.verticalAlign || 'top';
+        if (align === 'top') return base;
+        const realTextHeight = this.measureTextHeight ? this.measureTextHeight() : baseCalcTextHeight();
+        const slack = Math.max(0, (this.frameHeight || 0) - realTextHeight);
+        if (align === 'middle') return base + slack / 2;
+        if (align === 'bottom') return base + slack;
+        return base;
+      };
+
+      // Seed the default alignment so it persists in history snapshots.
+      if (!textbox.verticalAlign) textbox.verticalAlign = 'top';
+
       textbox.splitByGrapheme = false;
       ensureTextboxSerialState(textbox);
       syncTextboxWrappingBehavior(textbox);

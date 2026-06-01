@@ -119,6 +119,9 @@
       refs.alignLeftButton?.addEventListener('click', () => ctx.updateSelectedTextbox({ textAlign: 'left' }));
       refs.alignCenterButton?.addEventListener('click', () => ctx.updateSelectedTextbox({ textAlign: 'center' }));
       refs.alignRightButton?.addEventListener('click', () => ctx.updateSelectedTextbox({ textAlign: 'right' }));
+      refs.verticalTopButton?.addEventListener('click', () => ctx.updateSelectedTextbox({ verticalAlign: 'top' }));
+      refs.verticalMiddleButton?.addEventListener('click', () => ctx.updateSelectedTextbox({ verticalAlign: 'middle' }));
+      refs.verticalBottomButton?.addEventListener('click', () => ctx.updateSelectedTextbox({ verticalAlign: 'bottom' }));
       refs.boxCenterButton?.addEventListener('click', () => ctx.applyTextboxLayoutPreset('center'));
       refs.boxFillButton?.addEventListener('click', () => ctx.applyTextboxLayoutPreset('fill'));
       refs.imageBoxCenterButton?.addEventListener('click', () => ctx.applyVisualObjectLayoutPreset('center'));
