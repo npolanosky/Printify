@@ -219,9 +219,6 @@
         });
       });
 
-      // Select all on focus so the first digit typed replaces the whole
-      // value. Without this, typing "36" reads "8" → input fires → clamps
-      // to 8 → field shows "8" → typing "6" → field becomes "86".
       refs.fontSizeInput?.addEventListener('focus', () => {
         refs.fontSizeInput.select();
       });
@@ -232,9 +229,34 @@
         const parsedValue = Number.parseInt(refs.fontSizeInput.value || '', 10);
         if (!Number.isFinite(parsedValue)) return;
 
+        // Do not apply values below the minimum while the user is still
+        // typing. Without this guard, typing "36" triggers the handler on
+        // "3" → clamps to 8 → field resets to "8" → "6" appends → "86".
+        // Values ≥ 8 apply live for immediate canvas feedback; low/partial
+        // values (e.g. the leading digit of "36") are left in the field
+        // until the user commits with blur or Enter.
+        if (parsedValue < 8) return;
+
         if (refs.autoFitInput) refs.autoFitInput.checked = false;
         ctx.updateSelectedTextbox({
-          fontSize: Math.max(8, parsedValue),
+          fontSize: parsedValue,
+          autoFitText: false,
+        });
+      });
+
+      // On blur or Enter, clamp and normalize whatever is in the field so it
+      // always reflects a valid font size — e.g. if the user typed "3" and
+      // clicked away, clamp to 8 and update both the textbox and the field.
+      refs.fontSizeInput?.addEventListener('change', () => {
+        if (state.isSyncingFontSizeInput) return;
+
+        const parsedValue = Number.parseInt(refs.fontSizeInput.value || '', 10);
+        const clamped = Number.isFinite(parsedValue) ? Math.max(8, parsedValue) : null;
+        if (clamped === null) return;
+
+        if (refs.autoFitInput) refs.autoFitInput.checked = false;
+        ctx.updateSelectedTextbox({
+          fontSize: clamped,
           autoFitText: false,
         });
       });
