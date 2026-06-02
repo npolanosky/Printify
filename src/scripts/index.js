@@ -1969,7 +1969,7 @@
       });
     }
 
-    const settledUploads = await Promise.allSettled(uploadJobs.map(async ({ fileKind, file, indicator, clientJobId }) => {
+    const runUpload = async ({ fileKind, file, indicator, clientJobId }) => {
       const routePath = `/${printer.id}/${fileKind}`;
       const formData = new FormData();
       const uploadFields = {
@@ -2009,7 +2009,20 @@
         indicator.settle('error');
         throw new Error(`${printer.displayName}: ${error.message}`);
       }
-    }));
+    };
+
+    // Upload sequentially, in order. Concurrent uploads race to the server and
+    // print in arrival order — which scrambles serial-numbered label sets
+    // (e.g. 001/002/003 coming out 3,1,2). The printer handles one job at a
+    // time anyway, so sequential submission costs nothing and guarantees order.
+    const settledUploads = [];
+    for (const job of uploadJobs) {
+      try {
+        settledUploads.push({ status: 'fulfilled', value: await runUpload(job) });
+      } catch (error) {
+        settledUploads.push({ status: 'rejected', reason: error });
+      }
+    }
 
     const uploadResults = settledUploads
       .filter(result => result.status === 'fulfilled')
