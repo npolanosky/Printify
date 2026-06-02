@@ -96,6 +96,9 @@ plugins:
 #      bundleCopies: false
 #      # brotherDevice: "/dev/usb/lp0"    # optional; auto-detected when omitted
 #      # brotherAutocut: true              # optional; cut after each label (default true)
+#      # brotherChain: false              # EXPERIMENTAL: print multiple copies as one
+#                                          # chained job (init/feed once) instead of a
+#                                          # discrete cut per copy. Test on your hardware.
 
 printers:
   zebra:
