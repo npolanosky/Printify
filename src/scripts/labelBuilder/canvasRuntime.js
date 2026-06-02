@@ -419,6 +419,7 @@
       if (!textbox || !textbox.autoFitWidth) return false;
       const builderCanvas = ensureCanvas();
       const canvasWidth = builderCanvas.getWidth();
+      const canvasHeight = builderCanvas.getHeight();
       const padding = textbox.padding || 0;
 
       const naturalWidth = measureNaturalTextWidth(textbox);
@@ -426,9 +427,20 @@
 
       textbox.frameWidth = nextFrameWidth;
       textbox.width = nextFrameWidth;
-      // Keep centered within current canvas
+      // Keep centered horizontally within the current canvas.
       textbox.left = Math.round((canvasWidth - nextFrameWidth) / 2);
       textbox.initDimensions();
+
+      // When this is the only element on the label, also keep it centered
+      // vertically so a single auto-fit textbox stays pinned to the middle as
+      // the label length changes. With other objects present, the user has
+      // positioned things deliberately, so leave the vertical position alone.
+      const otherObjects = builderCanvas.getObjects()
+        .filter(object => object !== textbox && !object.excludeFromExport);
+      if (otherObjects.length === 0) {
+        textbox.top = Math.max(0, Math.round((canvasHeight - textbox.height) / 2));
+      }
+
       textbox.setCoords();
       return true;
     };
@@ -501,6 +513,16 @@
 
       builderCanvas.setDimensions({ width, height });
       builderCanvas.getObjects().forEach(object => {
+        // Auto-fit-width textboxes re-measure and re-center against the new
+        // canvas size, so the box follows the label length rather than being
+        // clamped to its old (now off-center) position.
+        if (object instanceof window.fabric.Textbox && object.autoFitWidth) {
+          object.frameHeight = Math.max(32, Math.min(object.frameHeight || object.height || 0, height));
+          if (object.autoFitText) ctx.fitTextboxFontToFrame(object);
+          applyAutoFitWidth(object);
+          return;
+        }
+
         if (object instanceof window.fabric.Textbox) {
           object.frameWidth = Math.max(48, Math.min(object.frameWidth || object.width || 0, width));
           object.frameHeight = Math.max(32, Math.min(object.frameHeight || object.height || 0, height));
@@ -545,8 +567,10 @@
         return;
       }
 
-      const requiredLengthMm = getRequiredTapeLengthMm(state.currentPrinter);
-      const nextLengthMm = Math.max(utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm), requiredLengthMm);
+      // getRequiredTapeLengthMm already floors at the tape height in auto mode,
+      // so use it directly — do NOT clamp up to the manual length field, which
+      // would prevent the label from shrinking below that value.
+      const nextLengthMm = getRequiredTapeLengthMm(state.currentPrinter);
 
       if (nextLengthMm === utils.normalizeTapeLengthMm(state.currentTapeLengthMm)) {
         refreshBuilderMeta();
@@ -689,6 +713,7 @@
       getContentBounds,
       getCurrentTapeCanvasSize,
       getEditableCodeObject,
+      getAutoLengthFloorMm,
       getEditableTextObject,
       getPreferredFontFamily,
       getPrinterCanvasMetrics,

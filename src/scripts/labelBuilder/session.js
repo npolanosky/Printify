@@ -46,6 +46,9 @@
       ctx.clearEnterPrintPrompt();
       ctx.syncPreviewButton();
       ctx.syncHistoryButtons();
+      // Refine the auto-length canvas now that the seed textbox exists, so the
+      // initial label fits its content without needing the toggle cycled.
+      void ctx.syncAutoFitTapeCanvas();
       void ctx.resetHistory();
     };
 
@@ -112,9 +115,14 @@
       // session so users can close the modal without losing in-progress work.
       if (!isRestoringSamePrinter) {
         state.currentTapeWidthMm = ctx.isTapePrinter(printer) ? ctx.utils.getResolvedDefaultTapeWidth(printer) : null;
-        state.currentTapeLengthMm = ctx.constants.DEFAULT_TAPE_LENGTH_MM;
         state.tapeMinimumLengthMm = ctx.constants.DEFAULT_TAPE_LENGTH_MM;
         state.tapeAutoLengthEnabled = true;
+        // Seed the starting length from the auto floor (tape height) so the
+        // first paint already reflects auto-length instead of the manual
+        // default, which previously required toggling the option off and on.
+        state.currentTapeLengthMm = ctx.isTapePrinter(printer)
+          ? ctx.getAutoLengthFloorMm(printer)
+          : ctx.constants.DEFAULT_TAPE_LENGTH_MM;
         state.invertPrintEnabled = Boolean(settings.getInvertPrintEnabled(printer?.id));
       }
 
