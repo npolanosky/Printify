@@ -2031,13 +2031,18 @@
     return uploadResults;
   };
 
-  const handlePrinterFiles = async (printerId, files, extraFields = {}) => {
+  const handlePrinterFiles = async (printerId, files, extraFields = {}, options = {}) => {
     const printer = getPrinterById(printerId);
 
     if (!printer) throw new Error(`Unknown printer: ${printerId}`);
 
-    const shouldContinue = await confirmOversizeFiles(printer, files);
-    if (!shouldContinue) return;
+    // The label builder renders its output at exactly the label dimensions,
+    // so the aspect-ratio check (which compares against a fixed target size)
+    // would produce false positives — skip it for builder-originated prints.
+    if (!options.skipAspectCheck) {
+      const shouldContinue = await confirmOversizeFiles(printer, files);
+      if (!shouldContinue) return;
+    }
 
     const groupedFiles = groupFilesByKind(printer, files);
     let uploadResults = [];
@@ -2477,7 +2482,7 @@
     if (typeof window.createPrintifyLabelBuilder !== 'function') return;
 
     appState.labelBuilder = window.createPrintifyLabelBuilder({
-      onPrint: (printer, files, extraFields) => handlePrinterFiles(printer.id, files, extraFields),
+      onPrint: (printer, files, extraFields) => handlePrinterFiles(printer.id, files, extraFields, { skipAspectCheck: true }),
       onError: error => showFeedback(error.message),
       getMonochromePreviewFields: printer => getPrinterUploadOptions(printer?.id),
       getInvertPrintEnabled: printerId => Boolean(appState.printerOptionState?.[printerId]?.invertPrint),
