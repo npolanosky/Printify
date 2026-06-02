@@ -262,17 +262,18 @@
       return object;
     };
 
-    const getCurrentTapeCanvasSize = printer => {
+    // The label height in mm: the selected tape width, capped to the printer's
+    // physical printable area when known (e.g. 24mm tape on an 18mm head → 18).
+    const getEffectiveTapeWidthMm = printer => {
       const tapeWidthMm = state.currentTapeWidthMm || utils.getResolvedDefaultTapeWidth(printer) || 12;
+      const maxPrintableMm = printer?.brotherMaxPrintableWidthMm || null;
+      return maxPrintableMm ? Math.min(tapeWidthMm, maxPrintableMm) : tapeWidthMm;
+    };
+
+    const getCurrentTapeCanvasSize = printer => {
       const tapeLengthMm = utils.normalizeTapeLengthMm(state.currentTapeLengthMm);
       const width = utils.mmToPixels(tapeLengthMm, printer?.density);
-      // Cap the canvas height to the printer's physical head width when known.
-      // This means selecting "24mm tape" on a printer with an 18mm head sizes
-      // the canvas to 18mm (the printable area) rather than 24mm — the user
-      // designs for what will actually print, not the full tape width.
-      const maxPrintableMm = printer?.brotherMaxPrintableWidthMm || null;
-      const effectiveTapeWidthMm = maxPrintableMm ? Math.min(tapeWidthMm, maxPrintableMm) : tapeWidthMm;
-      const height = utils.mmToPixels(effectiveTapeWidthMm, printer?.density);
+      const height = utils.mmToPixels(getEffectiveTapeWidthMm(printer), printer?.density);
 
       return {
         width: Number.isFinite(width) ? width : constants.DEFAULT_CANVAS_SIZE.width,
@@ -432,19 +433,30 @@
       return true;
     };
 
+    // When auto-length is on, the label should be free to shrink to roughly a
+    // square (the tape height) rather than being floored at the manual length
+    // field's value. The manual field only governs fixed-length mode.
+    const getAutoLengthFloorMm = printer => Math.max(
+      constants.MIN_TAPE_LENGTH_MM,
+      Math.round(getEffectiveTapeWidthMm(printer))
+    );
+
     const getRequiredTapeLengthMm = printer => {
       const density = Number(printer?.density);
       const paddingPx = utils.mmToPixels(constants.TAPE_EXPORT_PADDING_MM, density) || 0;
+      const floorMm = state.tapeAutoLengthEnabled
+        ? getAutoLengthFloorMm(printer)
+        : utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm);
 
       if (!Number.isFinite(density) || density <= 0) {
-        return utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm);
+        return floorMm;
       }
 
       const builderCanvas = ensureCanvas();
       const objects = builderCanvas.getObjects().filter(object => !object.excludeFromExport);
 
       if (!objects.length) {
-        return utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm);
+        return floorMm;
       }
 
       let requiredRight = 0;
@@ -466,8 +478,8 @@
       });
 
       return Math.max(
-        utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm),
-        requiredRight > 0 ? Math.ceil(((requiredRight + paddingPx) / density) * 25.4) : utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm)
+        floorMm,
+        requiredRight > 0 ? Math.ceil(((requiredRight + paddingPx) / density) * 25.4) : floorMm
       );
     };
 

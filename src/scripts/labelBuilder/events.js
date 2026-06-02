@@ -157,8 +157,10 @@
         if (!state.currentPrinter || !ctx.isTapePrinter(state.currentPrinter)) return;
 
         state.tapeMinimumLengthMm = ctx.utils.normalizeTapeLengthMm(refs.tapeLengthInput.value);
+        // In auto mode the required length already includes the tape-height
+        // floor, so do not clamp it back up to the manual length value.
         state.currentTapeLengthMm = state.tapeAutoLengthEnabled
-          ? Math.max(state.tapeMinimumLengthMm, ctx.getRequiredTapeLengthMm(state.currentPrinter))
+          ? ctx.getRequiredTapeLengthMm(state.currentPrinter)
           : state.tapeMinimumLengthMm;
         ctx.refreshBuilderMeta();
         await ctx.applyTapeCanvasSize(state.currentPrinter);
@@ -169,14 +171,13 @@
         state.tapeAutoLengthEnabled = Boolean(refs.tapeAutoLengthInput.checked);
 
         if (state.tapeAutoLengthEnabled) {
-          // Compute the required length NOW and apply immediately.  We must
+          // Compute the required length NOW and apply immediately. We must
           // call applyTapeCanvasSize directly because syncAutoFitTapeCanvas
           // compares against state.currentTapeLengthMm — if we update that
           // first it would see no change and bail without resizing the canvas.
-          state.currentTapeLengthMm = Math.max(
-            state.tapeMinimumLengthMm,
-            ctx.getRequiredTapeLengthMm(state.currentPrinter)
-          );
+          // getRequiredTapeLengthMm already floors at the tape height in auto
+          // mode, so the label can shrink well below the manual length value.
+          state.currentTapeLengthMm = ctx.getRequiredTapeLengthMm(state.currentPrinter);
           ctx.refreshBuilderMeta();
           await ctx.applyTapeCanvasSize(state.currentPrinter);
         } else {
