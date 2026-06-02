@@ -306,6 +306,10 @@
       if (state.currentPrinter && refs.size) {
         refs.size.textContent = describeBuilderSize(state.currentPrinter);
       }
+      // Keep the length field mirroring the live auto length as content grows.
+      if (isTapePrinter(state.currentPrinter)) {
+        syncLengthInputState();
+      }
     };
 
     const syncTapeControls = printer => {
@@ -341,12 +345,9 @@
         }
       }
 
-      if (refs.tapeLengthInput) {
-        refs.tapeLengthInput.value = String(utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm));
-        // Disable manual length entry while auto-fit is active; the canvas
-        // size is driven by content so a user-typed value would have no effect.
-        refs.tapeLengthInput.disabled = state.tapeAutoLengthEnabled;
-      }
+      // Disable manual length entry while auto-fit is active and mirror the
+      // live computed length; otherwise show the fixed manual length.
+      syncLengthInputState();
 
       if (refs.tapeAutoLengthInput) {
         refs.tapeAutoLengthInput.checked = state.tapeAutoLengthEnabled;
@@ -413,8 +414,12 @@
       return naturalWidth;
     };
 
-    // Apply auto-fit width: size the textbox to its content and re-center it
-    // on the canvas. Returns true if width changed, false if no-op.
+    // Apply auto-fit width: size the textbox to its content width and make it
+    // span the full label height, centered horizontally. The box occupying the
+    // whole height means the vertical-justification control (verticalAlign:
+    // top/middle/bottom) positions the text against the top/middle/bottom of
+    // the LABEL — middle being the default for a centered single textbox.
+    // Returns true (width handling applied) for an auto-fit-width textbox.
     const applyAutoFitWidth = textbox => {
       if (!textbox || !textbox.autoFitWidth) return false;
       const builderCanvas = ensureCanvas();
@@ -427,20 +432,15 @@
 
       textbox.frameWidth = nextFrameWidth;
       textbox.width = nextFrameWidth;
-      // Keep centered horizontally within the current canvas.
+      // Fill the full label height so verticalAlign maps to the label, and
+      // center horizontally within the current canvas.
+      textbox.frameHeight = canvasHeight;
       textbox.left = Math.round((canvasWidth - nextFrameWidth) / 2);
+      textbox.top = 0;
       textbox.initDimensions();
-
-      // When this is the only element on the label, also keep it centered
-      // vertically so a single auto-fit textbox stays pinned to the middle as
-      // the label length changes. With other objects present, the user has
-      // positioned things deliberately, so leave the vertical position alone.
-      const otherObjects = builderCanvas.getObjects()
-        .filter(object => object !== textbox && !object.excludeFromExport);
-      if (otherObjects.length === 0) {
-        textbox.top = Math.max(0, Math.round((canvasHeight - textbox.height) / 2));
-      }
-
+      // verticalAlign is read in _getTopOffset during the cached text render;
+      // mark dirty so the cache regenerates and the glyphs actually move.
+      textbox.dirty = true;
       textbox.setCoords();
       return true;
     };
@@ -517,9 +517,13 @@
         // canvas size, so the box follows the label length rather than being
         // clamped to its old (now off-center) position.
         if (object instanceof window.fabric.Textbox && object.autoFitWidth) {
-          object.frameHeight = Math.max(32, Math.min(object.frameHeight || object.height || 0, height));
-          if (object.autoFitText) ctx.fitTextboxFontToFrame(object);
+          // applyAutoFitWidth sets frameHeight to the (new) canvas height and
+          // re-centers; run font auto-fit afterwards so it fits the full height.
           applyAutoFitWidth(object);
+          if (object.autoFitText) {
+            ctx.fitTextboxFontToFrame(object);
+            object.dirty = true;
+          }
           return;
         }
 
@@ -556,10 +560,13 @@
     // runs on printer changes, so this must be called after any toggle.
     const syncLengthInputState = () => {
       if (!refs.tapeLengthInput) return;
+      // In auto mode the field is read-only but mirrors the live computed
+      // length so the operator can see what will print; in manual mode it
+      // shows (and accepts) the fixed length.
       refs.tapeLengthInput.disabled = state.tapeAutoLengthEnabled;
-      if (!state.tapeAutoLengthEnabled) {
-        refs.tapeLengthInput.value = String(utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm));
-      }
+      refs.tapeLengthInput.value = String(utils.normalizeTapeLengthMm(
+        state.tapeAutoLengthEnabled ? state.currentTapeLengthMm : state.tapeMinimumLengthMm
+      ));
     };
 
     const syncAutoFitTapeCanvas = async () => {

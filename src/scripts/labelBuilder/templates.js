@@ -89,6 +89,8 @@
           scaleX: object.scaleX || 1,
           scaleY: object.scaleY || 1,
           autoFitText: object.autoFitText !== false,
+          autoFitWidth: Boolean(object.autoFitWidth),
+          verticalAlign: object.verticalAlign || 'top',
           maxAutoFitFontSize: object.maxAutoFitFontSize || object.fontSize || 28,
           serialEnabled: Boolean(object.serialEnabled),
           serialCurrentValue: object.serialCurrentValue || 1,
@@ -197,6 +199,8 @@
         textAlign: templateObject.textAlign || 'center',
         padding: templateObject.padding || 10,
         autoFitText: templateObject.autoFitText !== false,
+        autoFitWidth: Boolean(templateObject.autoFitWidth),
+        verticalAlign: templateObject.verticalAlign || 'top',
         maxAutoFitFontSize: templateObject.maxAutoFitFontSize || templateObject.fontSize || 28,
       });
 

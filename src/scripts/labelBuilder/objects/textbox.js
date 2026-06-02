@@ -290,6 +290,7 @@
         frameHeight,
         autoFitText: false,
         autoFitWidth: true,
+        verticalAlign: 'middle',
       });
 
       builderCanvas.add(textbox);
@@ -315,6 +316,8 @@
         frameHeight,
         fontSize,
         autoFitText: false,
+        autoFitWidth: true,
+        verticalAlign: 'middle',
       });
     };
 
@@ -338,6 +341,10 @@
         textObject.initDimensions();
         textObject.setCoords();
       }
+      // Custom properties like verticalAlign are read during the cached text
+      // render (_getTopOffset) but do not flag the object dirty on their own,
+      // so the cached glyphs would not move. Force a cache refresh.
+      textObject.dirty = true;
       ctx.syncTextControls(textObject);
       ctx.ensureCanvas().requestRenderAll();
       void ctx.syncAutoFitTapeCanvas();
