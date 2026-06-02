@@ -153,15 +153,38 @@
         state.currentTapeWidthMm = nextTapeWidthMm;
         await ctx.applyTapeCanvasSize(state.currentPrinter);
       });
+      // Apply a typed length only once it is at or above the minimum (the
+      // loaded tape width). Values still below the minimum are left in the
+      // field so the user can keep typing — without this, typing "30" would
+      // apply "3" → clamp to the minimum → field rewrites → next digit lands
+      // on the clamped value (the same artifact the font-size field had).
       refs.tapeLengthInput?.addEventListener('input', async () => {
         if (!state.currentPrinter || !ctx.isTapePrinter(state.currentPrinter)) return;
+        if (state.tapeAutoLengthEnabled) return;
 
-        state.tapeMinimumLengthMm = ctx.utils.normalizeTapeLengthMm(refs.tapeLengthInput.value);
-        // In auto mode the required length already includes the tape-height
-        // floor, so do not clamp it back up to the manual length value.
-        state.currentTapeLengthMm = state.tapeAutoLengthEnabled
-          ? ctx.getRequiredTapeLengthMm(state.currentPrinter)
-          : state.tapeMinimumLengthMm;
+        const minLen = ctx.getAutoLengthFloorMm(state.currentPrinter);
+        const parsed = Number.parseInt(refs.tapeLengthInput.value || '', 10);
+        if (!Number.isFinite(parsed) || parsed < minLen) return;
+
+        state.tapeMinimumLengthMm = parsed;
+        state.currentTapeLengthMm = parsed;
+        ctx.refreshBuilderMeta();
+        await ctx.applyTapeCanvasSize(state.currentPrinter);
+      });
+
+      // On blur / Enter, clamp whatever remains to the minimum and apply, so
+      // an incomplete entry (e.g. just "3") settles to a valid length.
+      refs.tapeLengthInput?.addEventListener('change', async () => {
+        if (!state.currentPrinter || !ctx.isTapePrinter(state.currentPrinter)) return;
+        if (state.tapeAutoLengthEnabled) return;
+
+        const minLen = ctx.getAutoLengthFloorMm(state.currentPrinter);
+        const parsed = Number.parseInt(refs.tapeLengthInput.value || '', 10);
+        const clamped = Number.isFinite(parsed) ? Math.max(minLen, parsed) : minLen;
+
+        state.tapeMinimumLengthMm = clamped;
+        state.currentTapeLengthMm = clamped;
+        refs.tapeLengthInput.value = String(clamped);
         ctx.refreshBuilderMeta();
         await ctx.applyTapeCanvasSize(state.currentPrinter);
       });

@@ -560,13 +560,24 @@
     // runs on printer changes, so this must be called after any toggle.
     const syncLengthInputState = () => {
       if (!refs.tapeLengthInput) return;
-      // In auto mode the field is read-only but mirrors the live computed
-      // length so the operator can see what will print; in manual mode it
-      // shows (and accepts) the fixed length.
+      // Minimum length is the loaded tape width, so a label is never shorter
+      // than it is tall. Expose it on the spinner.
+      const minLen = state.currentPrinter
+        ? getAutoLengthFloorMm(state.currentPrinter)
+        : constants.MIN_TAPE_LENGTH_MM;
+      refs.tapeLengthInput.min = String(minLen);
       refs.tapeLengthInput.disabled = state.tapeAutoLengthEnabled;
-      refs.tapeLengthInput.value = String(utils.normalizeTapeLengthMm(
-        state.tapeAutoLengthEnabled ? state.currentTapeLengthMm : state.tapeMinimumLengthMm
-      ));
+      // In auto mode the field is read-only and mirrors the live computed
+      // length. In manual mode mirror the fixed length too, but ONLY when the
+      // field is not focused — overwriting it mid-entry clobbers typing (the
+      // "type 30, get 80" artifact); the change handler settles it on blur.
+      const isEditingLength = typeof document !== 'undefined'
+        && document.activeElement === refs.tapeLengthInput;
+      if (state.tapeAutoLengthEnabled) {
+        refs.tapeLengthInput.value = String(utils.normalizeTapeLengthMm(state.currentTapeLengthMm));
+      } else if (!isEditingLength) {
+        refs.tapeLengthInput.value = String(Math.max(minLen, utils.normalizeTapeLengthMm(state.tapeMinimumLengthMm)));
+      }
     };
 
     const syncAutoFitTapeCanvas = async () => {
