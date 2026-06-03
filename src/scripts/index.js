@@ -1940,30 +1940,103 @@
     };
   };
 
+  const createUploadIndicator = (printerId, clientJobId) => (
+    appState.confirmSystem?.createIndicator(printerId, {
+      id: clientJobId,
+      state: 'uploading',
+      progress: 0.02,
+    }) || {
+      setProgress() {},
+      setState() {},
+      settle() {},
+    }
+  );
+
+  // Brother chain printing: a serial-numbered label set arrives as N distinct
+  // image files in a single group. Posting them one-by-one prints them as
+  // separate discrete jobs (no chaining). Batch the whole group into one /multi
+  // request so the server can chain all N as a single multi-page job.
+  const runBatchedBrotherUpload = async ({ printer, fileKind, files, extraFields }) => {
+    const routePath = `/${printer.id}/${fileKind}/multi`;
+    const batchClientJobId = createClientJobId();
+    const indicator = createUploadIndicator(printer.id, batchClientJobId);
+    debugIdLog('indicator created (batch)', `printer=${printer.id}`, `clientJobId=${batchClientJobId}`, `files=${files.length}`);
+
+    const formData = new FormData();
+    const sharedFields = {
+      ...getPrinterUploadOptions(printer.id),
+      ...extraFields,
+    };
+    const fieldName = PRINTIFY_FILE_KINDS[fileKind].fieldName;
+    const jobMetaList = [];
+
+    for (const file of files) {
+      formData.append(fieldName, file, file.name);
+      jobMetaList.push({
+        clientJobId: batchClientJobId,
+        ...(await getTapeUploadMeta(printer, file)),
+      });
+    }
+
+    formData.append('clientJobId', batchClientJobId);
+    formData.append('jobMetaList', JSON.stringify(jobMetaList));
+
+    Object.entries(sharedFields).forEach(([name, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        formData.append(name, value);
+      }
+    });
+
+    debugIdLog('upload start (batch)', `printer=${printer.id}`, `route=${routePath}`, `clientJobId=${batchClientJobId}`, `files=${files.length}`);
+
+    try {
+      const uploadResult = await uploadFormDataWithProgress({
+        routePath,
+        formData,
+        onProgress: progress => indicator.setProgress(Math.max(0.02, progress * 0.28)),
+      });
+      const resolvedResult = await resolvePendingDuplicates(printer, uploadResult);
+      debugIdLog(
+        'upload success (batch)',
+        `printer=${printer.id}`,
+        `clientJobId=${batchClientJobId}`,
+        `printed=${Number(resolvedResult?.printedCount || 0)}`,
+        `needsConfirmation=${Boolean(resolvedResult?.needsConfirmation)}`
+      );
+      indicator.settle('success');
+      return resolvedResult;
+    } catch (error) {
+      debugIdLog('upload failed (batch)', `printer=${printer.id}`, `clientJobId=${batchClientJobId}`, error.message);
+      indicator.settle('error');
+      throw new Error(`${printer.displayName}: ${error.message}`);
+    }
+  };
+
   const uploadGroupedFiles = async (printer, groupedFiles, extraFields = {}) => {
     const groupEntries = Object.entries(groupedFiles);
     const uploadJobs = [];
+    const batchedGroups = [];
 
     if (!groupEntries.length) {
       throw new Error('No valid files were supplied.');
     }
 
     for (const [fileKind, files] of groupEntries) {
+      // Brother printers chain multi-file groups into a single /multi request.
+      // All other printers (and single-file groups) keep the per-file path.
+      if (printer.printMode === 'brother' && files.length > 1) {
+        batchedGroups.push({ fileKind, files });
+        debugIdLog('batch group queued', `printer=${printer.id}`, `fileKind=${fileKind}`, `files=${files.length}`);
+        continue;
+      }
+
       files.forEach(file => {
         const clientJobId = createClientJobId();
         uploadJobs.push({
           fileKind,
           file,
           clientJobId,
-          indicator: appState.confirmSystem?.createIndicator(printer.id, {
-            id: clientJobId,
-            state: 'uploading',
-            progress: 0.02,
-          }) || {
-            setProgress() {},
-            setState() {},
-            settle() {},
-          },
+          indicator: createUploadIndicator(printer.id, clientJobId),
         });
         debugIdLog('indicator created', `printer=${printer.id}`, `clientJobId=${clientJobId}`, `file=${file.name}`);
       });
@@ -2016,6 +2089,21 @@
     // (e.g. 001/002/003 coming out 3,1,2). The printer handles one job at a
     // time anyway, so sequential submission costs nothing and guarantees order.
     const settledUploads = [];
+    for (const group of batchedGroups) {
+      try {
+        settledUploads.push({
+          status: 'fulfilled',
+          value: await runBatchedBrotherUpload({
+            printer,
+            fileKind: group.fileKind,
+            files: group.files,
+            extraFields,
+          }),
+        });
+      } catch (error) {
+        settledUploads.push({ status: 'rejected', reason: error });
+      }
+    }
     for (const job of uploadJobs) {
       try {
         settledUploads.push({ status: 'fulfilled', value: await runUpload(job) });
