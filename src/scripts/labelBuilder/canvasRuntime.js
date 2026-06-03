@@ -414,32 +414,61 @@
       return naturalWidth;
     };
 
-    // Apply auto-fit width: size the textbox to its content width and make it
-    // span the full label height, centered horizontally. The box occupying the
-    // whole height means the vertical-justification control (verticalAlign:
-    // top/middle/bottom) positions the text against the top/middle/bottom of
-    // the LABEL — middle being the default for a centered single textbox.
-    // Returns true (width handling applied) for an auto-fit-width textbox.
+    // Apply auto-fit: size the textbox to wrap its content (width AND height),
+    // cap the font so the text never exceeds the tape/label height, center it
+    // horizontally, and place it vertically per the justification control
+    // (verticalAlign: top/middle/bottom of the LABEL — middle by default).
+    //
+    // The box is sized to its CONTENT (not the full label height) so the resize
+    // handles sit at the box edges inside the canvas (a full-height box pushes
+    // the top/bottom handles to the clipped canvas edge), and so a thin tape
+    // never yields a box taller than the label.
     const applyAutoFitWidth = textbox => {
       if (!textbox || !textbox.autoFitWidth) return false;
       const builderCanvas = ensureCanvas();
       const canvasWidth = builderCanvas.getWidth();
       const canvasHeight = builderCanvas.getHeight();
       const padding = textbox.padding || 0;
+      const availableHeight = Math.max(8, canvasHeight - padding * 2);
+      const measureHeight = () => (
+        textbox.measureTextHeight ? textbox.measureTextHeight() : textbox.calcTextHeight()
+      );
 
+      // 1) Cap the font so the text fits within the tape height. Only shrinks —
+      //    keeps thin tapes from producing a box taller than the label.
+      let textHeight = measureHeight();
+      if (textHeight > availableHeight && textHeight > 0) {
+        const nextFontSize = Math.max(6, Math.floor((textbox.fontSize || 8) * (availableHeight / textHeight)));
+        if (nextFontSize !== textbox.fontSize) {
+          textbox.set('fontSize', nextFontSize);
+          textbox.maxAutoFitFontSize = nextFontSize;
+          textbox.initDimensions();
+          textHeight = measureHeight();
+        }
+      }
+
+      // 2) Box wraps content: width = natural (unwrapped) text width, height =
+      //    text height (clamped to the label height).
       const naturalWidth = measureNaturalTextWidth(textbox);
-      const nextFrameWidth = Math.max(48, naturalWidth + padding * 2);
+      const nextFrameWidth = Math.max(24, naturalWidth + padding * 2);
+      const nextFrameHeight = Math.max(16, Math.min(canvasHeight, Math.round(textHeight)));
 
       textbox.frameWidth = nextFrameWidth;
       textbox.width = nextFrameWidth;
-      // Fill the full label height so verticalAlign maps to the label, and
-      // center horizontally within the current canvas.
-      textbox.frameHeight = canvasHeight;
-      textbox.left = Math.round((canvasWidth - nextFrameWidth) / 2);
-      textbox.top = 0;
+      textbox.frameHeight = nextFrameHeight;
       textbox.initDimensions();
-      // verticalAlign is read in _getTopOffset during the cached text render;
-      // mark dirty so the cache regenerates and the glyphs actually move.
+
+      // 3) Center horizontally; place vertically per the justification control.
+      const boxHeight = textbox.calcTextHeight ? textbox.calcTextHeight() : nextFrameHeight;
+      const align = textbox.verticalAlign || 'middle';
+      const top = align === 'top'
+        ? 0
+        : align === 'bottom'
+          ? Math.max(0, canvasHeight - boxHeight)
+          : Math.max(0, Math.round((canvasHeight - boxHeight) / 2));
+
+      textbox.left = Math.round((canvasWidth - nextFrameWidth) / 2);
+      textbox.top = top;
       textbox.dirty = true;
       textbox.setCoords();
       return true;
