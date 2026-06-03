@@ -90,12 +90,18 @@
 
       textObject.set('text', nextText);
       textObject.isPlaceholderText = false;
-      textObject.width = textObject.frameWidth || textObject.width;
 
-      if (textObject.autoFitText) {
-        fitTextboxFontToFrame(textObject);
+      if (textObject.autoFitWidth) {
+        // Serial tokens/numbers lengthen the text; re-measure so the box grows
+        // to fit instead of leaving the serial number off the right edge.
+        ctx.applyAutoFitWidth(textObject);
       } else {
-        textObject.initDimensions();
+        textObject.width = textObject.frameWidth || textObject.width;
+        if (textObject.autoFitText) {
+          fitTextboxFontToFrame(textObject);
+        } else {
+          textObject.initDimensions();
+        }
       }
 
       textObject.setCoords();

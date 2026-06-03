@@ -1,6 +1,6 @@
 name: Printify
 description: Print server for local label printers with native Brother P-Touch USB support
-version: "1.0.25"
+version: "1.0.26"
 slug: printify
 url: "https://github.com/npolanosky/Printify"
 arch:

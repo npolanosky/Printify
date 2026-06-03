@@ -327,6 +327,8 @@
 
         ctx.refreshTextboxSerialPreview(textObject);
         syncTextControls(textObject);
+        // The preview text length changed, so grow/shrink the tape length to fit.
+        void ctx.syncAutoFitTapeCanvas();
         void ctx.recordHistoryCheckpoint();
       });
 
@@ -341,6 +343,7 @@
         rememberSerialSettings(textObject.serialCurrentValue, refs.textSerialDigitsInput?.value);
         ctx.refreshTextboxSerialPreview(textObject);
         syncTextControls(textObject);
+        void ctx.syncAutoFitTapeCanvas();
         void ctx.recordHistoryCheckpoint();
       });
 
@@ -353,6 +356,7 @@
         rememberSerialSettings(textObject.serialCurrentValue, refs.textSerialDigitsInput.value);
         ctx.applyTextboxSerialDigits(textObject, refs.textSerialDigitsInput.value);
         syncTextControls(textObject);
+        void ctx.syncAutoFitTapeCanvas();
         void ctx.recordHistoryCheckpoint();
       });
 
