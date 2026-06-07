@@ -96,6 +96,10 @@ plugins:
 #      bundleCopies: false
 #      # brotherDevice: "/dev/usb/lp0"    # optional; auto-detected when omitted
 #      # brotherAutocut: true              # optional; cut after each label (default true)
+#      # brotherMargin: 14                 # leading/trailing feed in dots (default 14 =
+#                                          # ~2mm, the minimum pre-cut margin). Lower can
+#                                          # drop the printer into no-pre-cut mode (~24mm
+#                                          # leading waste); raise for a larger margin.
 #      # brotherChain: false              # EXPERIMENTAL: print multiple copies as one
 #                                          # chained job (init/feed once) instead of a
 #                                          # discrete cut per copy. Test on your hardware.
